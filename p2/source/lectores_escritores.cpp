@@ -14,7 +14,7 @@ constexpr int
     min_ms = 5,
     max_ms = 20,
     num_lec = 2,
-    num_esc = 2;
+    num_esc = 3;
 string
     mensaje_inicio = "inicio",
     mensaje_final  = "final";
@@ -56,6 +56,7 @@ bool
 
 public:
     Lec_Esc();
+    static const unsigned get_num_items() { return num_items; }
     unsigned ini_lectura();
     unsigned fin_lectura();
     void ini_escritura();
@@ -110,10 +111,19 @@ void Lec_Esc::fin_escritura()
         escritura.signal();
 }
 
+const unsigned
+    items_por_lector = Lec_Esc::get_num_items() / num_lec, 
+    sobrantes_lector = Lec_Esc::get_num_items() % num_lec,
+    items_por_escritor = Lec_Esc::get_num_items() / num_esc, 
+    sobrantes_escritor = Lec_Esc::get_num_items() % num_esc;
+
 // No hace nada mas que un mensaje por pantalla con un retraso aleatorio
 void funcion_hebra_lectura( MRef<Lec_Esc> monitor, unsigned i )
 {
-    while (true)
+    unsigned inicio = i * items_por_lector + (i < sobrantes_lector ? i : sobrantes_lector);
+    unsigned fin = inicio + items_por_lector + (i < sobrantes_lector ? 1 : 0);
+
+    for( unsigned i = inicio ; i < fin ; i++ )
     {
         monitor->ini_lectura();
         retraso_aleatorio_lectura(mensaje_inicio, i);
@@ -125,7 +135,10 @@ void funcion_hebra_lectura( MRef<Lec_Esc> monitor, unsigned i )
 // No hace nada mas que un mensaje por pantalla con un retraso aleatorio
 void funcion_hebra_escritora( MRef<Lec_Esc> monitor , unsigned i)
 {
-    while (true)
+    unsigned inicio = i * items_por_escritor + (i < sobrantes_escritor ? i : sobrantes_escritor);
+    unsigned fin = inicio + items_por_escritor + (i < sobrantes_escritor ? 1 : 0);
+
+    for( unsigned i = inicio ; i < fin ; i++ )
     {
         monitor->ini_escritura();
         retraso_aleatorio_escritura(mensaje_inicio, i);
