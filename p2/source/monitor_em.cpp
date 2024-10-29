@@ -21,7 +21,7 @@
 #include <mutex>
 #include <chrono>
 #include <random>
-#include "scd.h"
+#include "../include/scd.h"
 
 using namespace std ;
 using namespace std::chrono;

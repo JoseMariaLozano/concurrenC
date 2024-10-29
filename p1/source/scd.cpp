@@ -93,7 +93,7 @@
 #include <cassert>
 #include <thread>  // incluye std::this_thread::get_id()
 #include <system_error>
-#include "scd.h"
+#include "../include/scd.h"
 
 namespace scd
 {

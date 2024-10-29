@@ -3,7 +3,7 @@
 #include <thread>
 #include <mutex>
 #include <random>
-#include "scd.h"
+#include "../include/scd.h"
 
 using namespace std ;
 using namespace scd ;

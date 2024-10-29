@@ -9,7 +9,9 @@ using namespace std ;
 using namespace scd ;
 
 constexpr int
-   num_items = 15 ;   // número de items a producir/consumir
+   num_items = 15 , // número de items a producir/consumir
+   num_cons = 2,
+   num_prod = 2;   
 int
    siguiente_dato = 0 ; // siguiente valor a devolver en 'producir_dato'
    
@@ -89,8 +91,7 @@ class ProdConsSU1 : public HoareMonitor
    num_celdas_total = 10;   //   núm. de entradas del buffer
  int                        // variables permanentes
    buffer[num_celdas_total],//   buffer de tamaño fijo, con los datos
-   primera_libre ,          //   indice de celda de la próxima inserción
-   primera_ocupada;         //   indice de la celda de próxima lectura 
+   primera_libre ;          //   indice de celda de la próxima inserción
 
  CondVar                    // colas condicion:
    ocupadas,                //  cola donde espera el consumidor (primera_ocupada>0)
@@ -106,7 +107,6 @@ class ProdConsSU1 : public HoareMonitor
 ProdConsSU1::ProdConsSU1(  )
 {
    primera_libre = 0 ;
-   primera_ocupada = 0;
    ocupadas      = newCondVar();
    libres        = newCondVar();
 }
@@ -116,15 +116,16 @@ ProdConsSU1::ProdConsSU1(  )
 int ProdConsSU1::leer(  )
 {
    // esperar bloqueado hasta que primera_libre != primera_ocupada (haya algo que leer)
-   if ( primera_libre == primera_ocupada )
+   if ( primera_libre == 0 )
       ocupadas.wait();
 
    //cout << "leer: ocup == " << primera_libre << ", total == " << num_celdas_total << endl ;
-   assert( primera_libre != primera_ocupada  ); // tener cuidado que no sean iguales para no leer algo ya leído o no producido
+   assert( 0 < primera_libre ); // tener cuidado que no sean iguales para no leer algo ya leído o no producido
 
    // hacer la operación de lectura, actualizando estado del monitor
-   const int valor = buffer[primera_ocupada] ;
-   primera_ocupada = (primera_ocupada + 1) % num_celdas_total; 
+   primera_libre--;
+   const int valor = buffer[primera_libre] ;
+   
    
    // señalar al productor que hay un hueco libre, por si está esperando
    libres.signal();
@@ -137,15 +138,15 @@ int ProdConsSU1::leer(  )
 void ProdConsSU1::escribir( int valor )
 {
    // esperar bloqueado hasta que primera_libre+1 no sea == primera_ocupada (haya espacio para escribir sin borrar algo ya escrito)
-   if ( (primera_libre + 1) % num_celdas_total == primera_ocupada )
+   if ( primera_libre == num_celdas_total )
       libres.wait();
 
    //cout << "escribir: ocup == " << primera_libre << ", total == " << num_celdas_total << endl ;
-   assert( (primera_libre + 1) % num_celdas_total != primera_ocupada ); // puede no ser igual y ser mayor, si es mayor no podemos escribir
+   assert( primera_libre < num_celdas_total ); // puede no ser igual y ser mayor, si es mayor no podemos escribir
 
    // hacer la operación de inserción, actualizando estado del monitor
    buffer[primera_libre] = valor ;
-   primera_libre = (primera_libre + 1) % num_celdas_total ;
+   primera_libre++ ;
 
    // señalar al consumidor que ya hay una celda ocupada (por si esta esperando)
    ocupadas.signal();
@@ -153,9 +154,16 @@ void ProdConsSU1::escribir( int valor )
 // *****************************************************************************
 // funciones de hebras
 
-void funcion_hebra_productora( MRef<ProdConsSU1> monitor )
+void funcion_hebra_productora( MRef<ProdConsSU1> monitor, int i )
 {
-   for( unsigned i = 0 ; i < num_items ; i++ )
+   unsigned items_por_productor = num_items / num_cons; 
+   unsigned sobrantes = num_items % num_cons; 
+
+   // Repartir el numero de iteraciones sobrantes en cada hebra
+   unsigned inicio = i * items_por_productor + (i < sobrantes ? i : sobrantes);
+   unsigned fin = inicio + items_por_productor + (i < sobrantes ? 1 : 0);
+
+   for( unsigned i = inicio ; i < fin ; i++ )
    {
       int valor = producir_dato(  ) ;
       monitor->escribir( valor );
@@ -163,9 +171,16 @@ void funcion_hebra_productora( MRef<ProdConsSU1> monitor )
 }
 // -----------------------------------------------------------------------------
 
-void funcion_hebra_consumidora( MRef<ProdConsSU1>  monitor )
+void funcion_hebra_consumidora( MRef<ProdConsSU1>  monitor, int i )
 {
-   for( unsigned i = 0 ; i < num_items ; i++ )
+   unsigned items_por_productor = num_items / num_cons; 
+   unsigned sobrantes = num_items % num_cons; 
+
+   // Repartir el numero de iteraciones sobrantes en cada hebra
+   unsigned inicio = i * items_por_productor + (i < sobrantes ? i : sobrantes);
+   unsigned fin = inicio + items_por_productor + (i < sobrantes ? 1 : 0);
+
+   for( unsigned i = inicio ; i < fin ; i++ )
    {
       int valor = monitor->leer();
       consumir_dato( valor ) ;
@@ -175,21 +190,36 @@ void funcion_hebra_consumidora( MRef<ProdConsSU1>  monitor )
 
 int main()
 {
-   cout << "--------------------------------------------------------------------" << endl
-        << "Problema del productor-consumidor únicos (Monitor SU, buffer FIFO). " << endl
-        << "--------------------------------------------------------------------" << endl
+   cout << "-----------------------------------------------------------------------" << endl
+        << "Problema del productor-consumidor multiples (Monitor SU, buffer LIFO). " << endl
+        << "-----------------------------------------------------------------------" << endl
         << flush ;
 
    // crear monitor  ('monitor' es una referencia al mismo, de tipo MRef<...>)
    MRef<ProdConsSU1> monitor = Create<ProdConsSU1>() ;
 
-   // crear y lanzar las hebras
-   thread hebra_prod( funcion_hebra_productora, monitor ),
-          hebra_cons( funcion_hebra_consumidora, monitor );
+   thread hebras_productoras[num_prod];
+   thread hebras_consumidoras[num_cons];
 
-   // esperar a que terminen las hebras
-   hebra_prod.join();
-   hebra_cons.join();
+   // Inicialización de las hebras productoras
+   for (int i = 0; i < num_prod; ++i) {
+      hebras_productoras[i] = thread(funcion_hebra_productora, monitor, i);
+   }
+
+   // Inicialización de las hebras consumidoras
+   for (int i = 0; i < num_cons; ++i) {
+      hebras_consumidoras[i] = thread(funcion_hebra_consumidora, monitor, i);
+   }
+
+   // Hacer join con las hebras productoras
+   for (int i = 0; i < num_prod; ++i) {
+      hebras_productoras[i].join();
+   }
+
+   // Hacer join con las hebras consumidoras
+   for (int i = 0; i < num_cons; ++i) {
+      hebras_consumidoras[i].join();
+   }
 
    test_contadores() ;
 }

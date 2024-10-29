@@ -4,7 +4,7 @@
 #include <mutex>
 #include <random> // dispositivos, generadores y distribuciones aleatorias
 #include <chrono> // duraciones (duration), unidades de tiempo
-#include "scd.h"
+#include "../include/scd.h"
 
 using namespace std ;
 using namespace scd ;

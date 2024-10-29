@@ -3,7 +3,7 @@
 #include <cassert>
 #include <random>
 #include <thread>
-#include "scd.h"
+#include "../include/scd.h"
 
 using namespace std ;
 using namespace scd ;
