@@ -2,9 +2,6 @@
 // Semaphores and Hoare monitors implementation using C++11 concurrency features.
 // both classes implement FIFO order.
 //
-// (public interface declarations)
-// Carlos Ureña, 2016-2021.
-//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
