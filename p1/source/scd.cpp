@@ -2,45 +2,6 @@
 //
 // Semaphores and Hoare monitors implementation using C++11 concurrency features.
 // both classes implement FIFO order.
-//
-// Carlos Ureña Almagro 2017-2021
-//
-// -----------------------------------------------------------------------------
-// Semaphores (class 'Semaphore')
-// 
-// History:
-// April, 2017    : created
-// Sept, 15, 2017 : removed reference count, now 'std::shared_ptr' is used instead
-// July, 15, 2018 : implemented guaranteed FIFO order
-// Oct, 11, 2019  : added move constructor and explicitly deleted copy and
-//                  assignement constructors, so no semaphore aliases are created and
-//                  'shared_ptr' is no longer needed
-// Oct, 25, 2019  : solved a bug in the // LOGM macro (didn't compile in g++)
-// May, 2021      : removed use of LOGM macro.
-// Oct 2021       : SemaphoreRepr imlementation changed so it also uses 'FIFOQueue's objects, 
-//                  one for EM and other for blocked threads (see github repository for a very 
-//                  detailed explanation). (added LOGM macro and logm function).
-//
-//
-// -----------------------------------------------------------------------------
-// Urgent wait Hoare-like FIFO monitors for C++11
-//
-// History:
-// November 2016 : created
-// March 2017    : updated
-// Oct-Nov 2017  : using shared_ptr for monitors references
-// November 2017 : using guranteed FIFO queues for urgent and monitor queues
-// December 2017 : added TODO above, about implementation
-// July 2018     : changed implementation to use FIFO semaphores, as described in
-//                 Hoare's article.
-// Oct 2020      : fixed a bug: 'mutex_count' was not initialized to 0, 
-//                 (the bug showed just on mac with the XCode clang compiler, but not in linux
-//                  as compiler use to insert initialization to 0 code).
-// May 2021      : no longer use semaphores for the queues in monitors, use 'FIFOQueue' instead. 
-//                 This guarantees FIFO order
-
-//
-//
 // References:
 //
 //  This implementation is based on the design (using semaphores) introduced by Hoare:
